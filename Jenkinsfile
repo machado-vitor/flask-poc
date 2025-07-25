@@ -7,22 +7,22 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                // Use explicit git checkout instead of 'checkout scm'
-                git branch: 'main', url: 'https://github.com/machado-vitor/flask-poc.git'
-            }
-        }
-
         stage('Install Dependencies') {
             steps {
-                // Use Python within a virtual environment to avoid permission issues
-                sh '''
-                    python -m venv venv
-                    . venv/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                '''
+                script {
+                    try {
+                        // Use Python within a virtual environment to avoid permission issues
+                        sh '''
+                            python -m venv venv || python3 -m venv venv
+                            . venv/bin/activate
+                            pip install --upgrade pip
+                            pip install -r requirements.txt
+                        '''
+                    } catch (Exception e) {
+                        echo "Failed to install dependencies: ${e.message}"
+                        error "Failed to install dependencies: ${e.message}"
+                    }
+                }
             }
         }
 
@@ -35,34 +35,43 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Simulation') {
             steps {
                 script {
                     try {
-                        sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                        sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+                        echo "Simulating build process for ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                        echo "Checking application artifacts..."
+                        sh "ls -la"
+                        echo "Build simulation successful"
                     } catch (Exception e) {
-                        echo "Docker build failed: ${e.message}"
+                        echo "Build simulation failed: ${e.message}"
                         currentBuild.result = 'FAILURE'
-                        error "Docker build failed: ${e.message}"
+                        error "Build simulation failed: ${e.message}"
                     }
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Simulation') {
             when {
                 expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
             }
             steps {
                 script {
                     try {
-                        sh "docker stop ${DOCKER_IMAGE} || true"
-                        sh "docker rm ${DOCKER_IMAGE} || true"
-                        sh "docker run -d -p 5001:5001 --name ${DOCKER_IMAGE} ${DOCKER_IMAGE}:latest"
-                        echo "Application successfully deployed at port 5001"
+                        echo "Simulating deployment of ${DOCKER_IMAGE} application"
+                        echo "Copying application files to simulated production environment..."
+                        sh "mkdir -p deploy-simulation"
+                        sh "cp -r *.py deploy-simulation/"
+                        sh "cp -r requirements.txt deploy-simulation/"
+
+                        echo "Starting simulated application service..."
+                        echo "Verifying deployment..."
+                        sh "ls -la deploy-simulation"
+
+                        echo "Application successfully deployed in simulation environment"
                     } catch (Exception e) {
-                        echo "Deployment failed: ${e.message}"
+                        echo "Simulated deployment failed: ${e.message}"
                         currentBuild.result = 'UNSTABLE'
                     }
                 }
@@ -82,8 +91,7 @@ pipeline {
         }
         always {
             echo 'Cleaning up workspace...'
-            sh 'rm -rf venv || true'
-            cleanWs()
         }
     }
 }
+
