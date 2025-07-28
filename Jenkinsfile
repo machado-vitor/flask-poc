@@ -7,6 +7,13 @@ pipeline {
         DOCKER_REGISTRY = 'docker.io/myregistry' // Replace with your actual registry
     }
 
+    stage('Checkout') {
+                steps {
+                    // Explicitly checkout with credentials if needed
+                    checkout scm
+                }
+            }
+
     stages {
         stage('Install Dependencies') {
             steps {
@@ -65,7 +72,10 @@ pipeline {
             echo 'Pipeline failed!'
         }
         always {
-            sh "docker logout ${DOCKER_REGISTRY} || true"
+            script {
+                def dockerRegistry = env.DOCKER_REGISTRY ?: 'docker.io/myregistry'
+                sh "docker logout ${dockerRegistry} || true"
+            }
             echo 'Pipeline finished - cleaning up workspace'
         }
     }
