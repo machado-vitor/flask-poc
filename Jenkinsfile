@@ -4,25 +4,17 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'flask-demo-app'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
+        DOCKER_REGISTRY = 'docker.io/myregistry' // Replace with your actual registry
     }
 
     stages {
         stage('Install Dependencies') {
             steps {
-                script {
-                    try {
-                        // Use Python within a virtual environment to avoid permission issues
-                        sh '''
-                            python -m venv venv || python3 -m venv venv
-                            . venv/bin/activate
-                            pip install --upgrade pip
-                            pip install -r requirements.txt
-                        '''
-                    } catch (Exception e) {
-                        echo "Failed to install dependencies: ${e.message}"
-                        error "Failed to install dependencies: ${e.message}"
-                    }
-                }
+                sh '''
+                    python -m venv venv || python3 -m venv venv
+                    . venv/bin/activate
+                    pip install -r requirements.txt
+                '''
             }
         }
 
@@ -35,46 +27,32 @@ pipeline {
             }
         }
 
-        stage('Build Simulation') {
+        stage('Build Docker Image') {
             steps {
-                script {
-                    try {
-                        echo "Simulating build process for ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                        echo "Checking application artifacts..."
-                        sh "ls -la"
-                        echo "Build simulation successful"
-                    } catch (Exception e) {
-                        echo "Build simulation failed: ${e.message}"
-                        currentBuild.result = 'FAILURE'
-                        error "Build simulation failed: ${e.message}"
-                    }
+                sh "docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                sh "docker tag ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest"
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-registry-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh "echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin"
+                    sh "docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    sh "docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest"
                 }
             }
         }
 
-        stage('Deploy Simulation') {
+        stage('Deploy Application') {
             when {
                 expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
             }
             steps {
-                script {
-                    try {
-                        echo "Simulating deployment of ${DOCKER_IMAGE} application"
-                        echo "Copying application files to simulated production environment..."
-                        sh "mkdir -p deploy-simulation"
-                        sh "cp -r *.py deploy-simulation/"
-                        sh "cp -r requirements.txt deploy-simulation/"
-
-                        echo "Starting simulated application service..."
-                        echo "Verifying deployment..."
-                        sh "ls -la deploy-simulation"
-
-                        echo "Application successfully deployed in simulation environment"
-                    } catch (Exception e) {
-                        echo "Simulated deployment failed: ${e.message}"
-                        currentBuild.result = 'UNSTABLE'
-                    }
-                }
+                sh "docker stop ${DOCKER_IMAGE} || true"
+                sh "docker rm ${DOCKER_IMAGE} || true"
+                sh "docker run -d --name ${DOCKER_IMAGE} -p 5001:5001 ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}"
+                echo "Application successfully deployed"
             }
         }
     }
@@ -86,11 +64,9 @@ pipeline {
         failure {
             echo 'Pipeline failed!'
         }
-        unstable {
-            echo 'Pipeline completed with issues!'
-        }
         always {
-            echo 'Cleaning up workspace...'
+            sh "docker logout ${DOCKER_REGISTRY} || true"
+            echo 'Pipeline finished - cleaning up workspace'
         }
     }
 }
