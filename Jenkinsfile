@@ -7,14 +7,14 @@ pipeline {
         DOCKER_REGISTRY = 'docker.io/myregistry' // Replace with your actual registry
     }
 
-    stage('Checkout') {
-                steps {
-                    // Explicitly checkout with credentials if needed
-                    checkout scm
-                }
-            }
-
     stages {
+        stage('Checkout') {
+            steps {
+                // Explicitly checkout with credentials if needed
+                checkout scm
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 sh '''
