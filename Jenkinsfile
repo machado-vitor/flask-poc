@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'flask-demo-app'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
-        DOCKER_REGISTRY = 'docker.io/myregistry' // Replace with your actual registry
+        DOCKER_REGISTRY = 'vitor01000' // Replace with your actual registry
     }
 
     stages {
