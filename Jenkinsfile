@@ -1,8 +1,22 @@
 pipeline {
     agent any
+    options { skipDefaultCheckout(true) }
 
     stages {
-
+        stage('Checkout') {
+            steps {
+              deleteDir()  // ensure a clean workspace
+              checkout([
+                $class: 'GitSCM',
+                branches: [[name: '*/main']],               // adjust if your default branch isn’t main
+                userRemoteConfigs: [[
+                  url: 'https://github.com/machado-vitor/flask-poc.git',
+                  credentialsId: 'ce5465c2-3536-4ecf-8f58-874611d5221d'
+                ]],
+                extensions: [[ $class: 'CleanBeforeCheckout' ]] // optional, keeps it clean
+              ])
+            }
+        }
         stage('Install Dependencies') {
             steps {
                 sh 'python3 -m venv venv'
