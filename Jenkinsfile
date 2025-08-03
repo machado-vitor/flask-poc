@@ -6,7 +6,8 @@ pipeline {
         APP_NAME = 'flask-demo-app'
         DOCKER_REGISTRY = 'docker.io/yourusername' // Replace with your registry
         IMAGE_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.substring(0,7)}"
-        KUBECONFIG = credentials('kubeconfig') // Credentials ID for Kubernetes config
+        // Try to load kubeconfig credentials, but don't fail if they don't exist
+        KUBERNETES_DEPLOY = false
     }
 
     options {
