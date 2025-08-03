@@ -6,8 +6,8 @@ pipeline {
         APP_NAME = 'flask-demo-app'
         DOCKER_REGISTRY = 'docker.io/yourusername' // Replace with your registry
         IMAGE_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.substring(0,7)}"
-        // Try to load kubeconfig credentials, but don't fail if they don't exist
-        KUBERNETES_DEPLOY = false
+        // Default to not deploying to Kubernetes
+        KUBERNETES_DEPLOY = 'false'
     }
 
     options {
@@ -78,28 +78,41 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    // Set up kubeconfig
-                    sh "mkdir -p ~/.kube"
-                    sh "cp ${KUBECONFIG} ~/.kube/config"
+                    try {
+                        // Try to load kubeconfig credentials
+                        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                            env.KUBERNETES_DEPLOY = 'true'
 
-                    // Deploy using Helm to the applications namespace
-                    sh """
-                        cd app
-                        helm upgrade --install ${APP_NAME} ./helm/flask-app \
-                          --namespace applications \
-                          --create-namespace \
-                          --set image.repository=${APP_NAME} \
-                          --set image.tag=${IMAGE_TAG} \
-                          --set image.pullPolicy=IfNotPresent \
-                          --set ingress.hosts[0].host=${APP_NAME}.example.com \
-                          --set prometheus.enabled=true
-                    """
+                            // Set up kubeconfig
+                            sh "mkdir -p ~/.kube"
+                            sh "cp ${KUBECONFIG} ~/.kube/config"
 
-                    // Verify deployment
-                    sh "kubectl rollout status deployment/${APP_NAME}"
+                            // Deploy using Helm to the applications namespace
+                            sh """
+                                cd app
+                                helm upgrade --install ${APP_NAME} ./helm/flask-app \
+                                  --namespace applications \
+                                  --create-namespace \
+                                  --set image.repository=${APP_NAME} \
+                                  --set image.tag=${IMAGE_TAG} \
+                                  --set image.pullPolicy=IfNotPresent \
+                                  --set ingress.hosts[0].host=${APP_NAME}.example.com \
+                                  --set prometheus.enabled=true
+                            """
 
-                    // Display service information
-                    sh "kubectl get svc,ing -l app.kubernetes.io/name=${APP_NAME}"
+                            // Verify deployment
+                            sh "kubectl rollout status deployment/${APP_NAME}"
+
+                            // Display service information
+                            sh "kubectl get svc,ing -l app.kubernetes.io/name=${APP_NAME}"
+                        }
+                    } catch (Exception e) {
+                        // If kubeconfig credential doesn't exist or any other error occurs
+                        echo "Skipping Kubernetes deployment: ${e.message}"
+                        echo "To deploy to Kubernetes, make sure the 'kubeconfig' credential is configured in Jenkins."
+                        // Don't fail the build
+                        env.KUBERNETES_DEPLOY = 'false'
+                    }
                 }
             }
         }
@@ -107,7 +120,14 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline completed successfully! Application deployed to Kubernetes."
+            script {
+                if (env.KUBERNETES_DEPLOY == 'true') {
+                    echo "Pipeline completed successfully! Application deployed to Kubernetes."
+                } else {
+                    echo "Pipeline completed successfully! Application built and tested, but not deployed to Kubernetes."
+                    echo "To deploy to Kubernetes, make sure the 'kubeconfig' credential is configured in Jenkins."
+                }
+            }
         }
         failure {
             echo "Pipeline failed! Check the logs for details."
