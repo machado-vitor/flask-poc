@@ -113,8 +113,10 @@ pipeline {
         }
         always {
             // Clean up
-            sh "rm -rf .venv"
-            sh "docker system prune -f"
+            node {
+                sh "rm -rf .venv"
+                sh "docker system prune -f"
+            }
         }
     }
 }
