@@ -1,5 +1,11 @@
+nameOverride: ""
+fullnameOverride: ""
 # Default values for flask-app
 replicaCount: 1
+
+# Prometheus monitoring configuration
+prometheus:
+  enabled: false  # Set to true to enable Prometheus monitoring
 
 image:
   repository: flask-demo-app
@@ -13,10 +19,10 @@ service:
 
 ingress:
   enabled: true
-  className: "nginx"
+  className: ""
   annotations: {}
   hosts:
-    - host: flask-app.local
+    - host: chart-example.local
       paths:
         - path: /
           pathType: Prefix
@@ -29,5 +35,20 @@ resources:
     cpu: 50m
     memory: 64Mi
 
-nameOverride: ""
-fullnameOverride: ""
+env:
+  - name: ENVIRONMENT
+    value: "production"
+
+livenessProbe:
+  httpGet:
+    path: /api/status
+    port: 5001
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /api/status
+    port: 5001
+  initialDelaySeconds: 5
+  periodSeconds: 5
