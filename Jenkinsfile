@@ -113,7 +113,7 @@ pipeline {
         }
         always {
             // Clean up
-            node {
+            node('') {  // Empty string label means use any available node
                 sh "rm -rf .venv"
                 sh "docker system prune -f"
             }
