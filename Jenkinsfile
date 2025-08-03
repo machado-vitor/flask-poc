@@ -90,7 +90,7 @@ pipeline {
                             // Deploy using Helm to the applications namespace
                             sh """
                                 cd app
-                                helm upgrade --install ${APP_NAME} ./helm/flask-app \
+                                helm upgrade --install ${APP_NAME} ./helm/flask-poc \
                                   --namespace applications \
                                   --create-namespace \
                                   --set image.repository=${APP_NAME} \

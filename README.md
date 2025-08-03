@@ -19,7 +19,7 @@ The application is a simple Flask API with the following endpoints:
 - `requirements.txt` - Python dependencies
 - `Dockerfile` - Docker image definition
 - `Jenkinsfile` - Jenkins pipeline definition
-- `helm/flask-app/` - Helm chart for deploying to Kubernetes
+- `helm/flask-poc/` - Helm chart for deploying to Kubernetes
 
 ## CI/CD Pipeline
 
@@ -33,7 +33,7 @@ The CI/CD pipeline is defined in the `Jenkinsfile` and consists of the following
 
 ## Deployment
 
-The application is deployed to Kubernetes using Helm. The Helm chart is located in the `helm/flask-app/` directory and includes:
+The application is deployed to Kubernetes using Helm. The Helm chart is located in the `helm/flask-poc/` directory and includes:
 
 - Deployment - Manages the application pods
 - Service - Provides network access to the application
@@ -155,11 +155,11 @@ To deploy the application to Kubernetes:
 
 2. Install the Helm chart:
    ```
-   helm upgrade --install flask-app ./helm/flask-app \
+   helm upgrade --install flask-poc ./helm/flask-poc \
      --set image.repository=flask-demo-app \
      --set image.tag=latest \
      --set image.pullPolicy=IfNotPresent \
-     --set ingress.hosts[0].host=flask-app.example.com
+     --set ingress.hosts[0].host=flask-poc.example.com
    ```
 
 ## Infrastructure Management with OpenTofu
